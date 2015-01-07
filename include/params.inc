@@ -7,6 +7,6 @@
 	$dbUtilisateur = "garneau";
 	// Mot de passe
 	$dbMotPasse = "qwerty123";
-	// Base de donn�es
+	// Base de données
 	$dbNom = "faireface";
 ?>
