@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Jan 07, 2015 at 03:36 PM
+-- Generation Time: Jan 07, 2015 at 05:09 PM
 -- Server version: 5.6.16
 -- PHP Version: 5.5.9
 
@@ -24,26 +24,23 @@ DELIMITER $$
 --
 -- Procedures
 --
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_CreerUtilisateur`(IN courriel varchar(63),
-										IN pass varchar(45),
-                                        IN telephone varchar(10),
-                                        IN codePostal varchar(6),
+CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_CreerConseiller`(
+										IN login varchar(45),
+                                        IN pass varchar(45),
                                         OUT resultat INT)
-    COMMENT 'Créer un utilisateur. Retourne un nombre positif si OK, un chiffre négatif si ERREUR.'
+    COMMENT 'Créer un conseiller. Retourne un nombre positif si OK, un chiffre négatif si ERREUR.'
 BEGIN
 
 	#Erreur de données dupliquée
-	#Généralement levée lors de l'ajout d'un membre qui existe déjà.
+	#Généralement levée lors de l'ajout d'un conseiller qui existe déjà.
  	DECLARE EXIT HANDLER FOR 1062 
-		set resultat = -1;
+		set resultat = -1062;
 
 	#Erreur générale non définie
 	DECLARE EXIT HANDLER FOR SQLEXCEPTION
 		set resultat = -99;
 
-    set resultat = 0;
-
-    IF courriel IS NULL THEN 
+    IF login IS NULL THEN 
 		set resultat = -2;
 	END IF;
 
@@ -51,17 +48,9 @@ BEGIN
 		set resultat = -3;
 	END IF;
 
-    IF telephone IS NULL THEN 
-		set resultat = -4;
-	END IF;
-
-    IF codePostal IS NULL THEN 
-		set resultat = -5;
-	END IF;
-    
-    IF resultat THEN
-		INSERT INTO Inscription (CodePostal,Telephone,Courriel,motDePasse)
-		VALUES (codePostal, telephone, courriel, SHA1(pass));
+    IF resultat IS NULL THEN
+		INSERT INTO Conseillers (Login, MotDePasse)
+		VALUES (Login, SHA1(pass));
 		set resultat = 1;
 	END IF;
     
@@ -185,13 +174,20 @@ INSERT INTO `CategorieSinistre` (`id`, `Nom`) VALUES
 --
 
 CREATE TABLE IF NOT EXISTS `Conseillers` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `Login` varchar(45) NOT NULL,
-  `MotDePasse` char(45) NOT NULL,
+  `MotDePasse` char(40) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `id_UNIQUE` (`id`),
   UNIQUE KEY `loging_UNIQUE` (`Login`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=3 ;
+
+--
+-- Dumping data for table `Conseillers`
+--
+
+INSERT INTO `Conseillers` (`id`, `Login`, `MotDePasse`) VALUES
+(1, 'yvan', 'a16358be6e2306b153b1f071477e68837266075e');
 
 -- --------------------------------------------------------
 
