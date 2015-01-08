@@ -7,7 +7,7 @@ require_once($base."include/header.php");
 <div id="page" class="container">
 <h1>Connexion</h1>
 
-<form class="form-horizontal">
+<form class="form-horizontal" action="/connexion/traitement.php" method="post">
 <fieldset>
 
 <!-- Form Name -->
