@@ -50,7 +50,6 @@ require_once($base."include/header.php");
 					    </a>
 					</div>
 				</div>
-
 				<?php
 			}?>
 			</div>
@@ -74,10 +73,10 @@ require_once($base."include/header.php");
 		// ctx.lineTo(size,y);
 		// ctx.stroke();
 
-		ctx.beginPath();
-		ctx.arc(x,y,size/50,0,2*Math.PI);
-		ctx.fillStyle = "#000000";
-		ctx.fill();
+		ctx.font="30px Arial";
+		// ctx.arc(x,y,size/50,0,2*Math.PI);
+		ctx.fillText("📍",x, y);
+		// ctx.fill();
     }
     </script>
 <?php
