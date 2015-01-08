@@ -11,9 +11,37 @@
 		private $id;
 		private $login;
 		private $mdp;
+
+		public function __construct($id)
+		{
+			if (isset($id) && !is_null($id))
+			{
+				$this->recuperer($id);
+			}
+		}
+
+		public function recuperer($id)
+		{
+			try
+			{
+				$req = 'CALL sp_GetConseiller(:id)';
+
+				$ajout = $connexion->prepare($req);
+				$ajout->bindParam(':id',$id);
+
+				$ajout->execute();
+				$ajout->closeCursor();
+
+				return $resultat > 0 ? true : false;
+			}
+			catch(PDOException $e)
+			{
+				exit ("Erreur lors de l'exécution de la requête SQL :<br />\n" .  $e -> getMessage());
+			}
+		}
 		
 		// Créer un conseiller
-		public function nouveau($newLog, $newMdp)
+		public static function nouveau($newLog, $newMdp)
 		{
 			$resultat;
 			$this->login = $newLog;
@@ -31,6 +59,8 @@
 
 				$ajout->execute();
 				$ajout->closeCursor();
+
+				return $resultat > 0 ? true : false;
 			}
 			catch(PDOException $e)
 			{
@@ -39,7 +69,7 @@
 		}
 
 		// Vérifier le login
-		public function connecter($login, $mdp)
+		public static function connecter($login, $mdp)
 		{
 			$resultat;
 			$this->login = $login;
@@ -57,6 +87,8 @@
 
 				$connecte->execute();
 				$connecte->closeCursor();
+
+				return $resultat > 0 ? true : false;
 
 			}
 			catch(PDOException $e)
