@@ -19,5 +19,10 @@
 		{
 			return $estConnect;
 		}
+
+		public function enregistrer($login)
+		{
+			$_SESSION['login'] = $login;
+		}
 	}
 ?>

@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Jan 08, 2015 at 03:56 PM
+-- Generation Time: Jan 08, 2015 at 09:55 PM
 -- Server version: 5.6.16
 -- PHP Version: 5.5.9
 
@@ -24,6 +24,133 @@ DELIMITER $$
 --
 -- Procedures
 --
+CREATE DEFINER=`root`@`localhost` PROCEDURE `Ajouter_Sinistres`(
+		IN  Titre_Sinistre          varchar(255),
+		IN  Categorie_Sinistre      INT(11),
+		IN  Description_Sinistre    varchar(255),
+		IN  GeoPosX_Sinistre        float,
+		IN  GeoPosY_Sinistre        float,
+		OUT resultat  		        INT(1))
+BEGIN
+	DECLARE countCatergorie INT;
+    
+	SELECT COUNT(id) into countCatergorie FROM categoriesinistre WHERE id = Categorie_Sinistre;
+    
+    if countCatergorie then
+		INSERT INTO sinistres(
+			Titre,
+			Categorie,
+			Description,
+			GeoPosX,
+			GeoPosY) 
+		values(
+			Titre_Sinistre,
+			Categorie_Sinistre,
+			Description_Sinistre,
+			GeoPosX_Sinistre,
+			GeoPosY_Sinistre);
+		SET resultat = 1;
+	else
+		SET resultat = -1;
+	end if;
+end$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `Lister_Evenement`()
+BEGIN
+	
+	SELECT * FROM sinistres; 
+
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_Ajouter_Cat_Sinistre`(IN nomCat VARCHAR(255),
+                                        OUT resultat INT)
+    COMMENT 'Ajoute une catégorie de sinistre. Retourne un nombre positif si OK, un chiffre négatif si ERREUR.'
+BEGIN
+
+	#Erreur de données dupliquée
+	#Généralement levée lors de l'ajout d'une catégorie qui existe déjà.
+ 	DECLARE EXIT HANDLER FOR 1062 
+		set resultat = -1;
+
+	#Erreur générale non définie
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+		set resultat = -99;
+    
+    IF nomCat is null OR nomCat = '' THEN 
+		set resultat = -2;
+	END IF;
+    
+    IF resultat is null THEN
+		INSERT INTO CategorieSinistre (Nom)
+		VALUES (nomCat);
+		set resultat = 1;
+	END IF;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_Ajouter_Element_Sinistre`(IN sinistreId INT,
+										IN typeFichier Enum('Image','Video'),
+                                        IN fichier VARCHAR(255),
+                                        OUT resultat INT)
+    COMMENT 'Ajoute un élément au sinistre. Retourne un nombre positif si OK, un chiffre négatif si ERREUR.'
+BEGIN
+
+	#Erreur générale non définie
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+		set resultat = -99;
+    
+    IF fichier is null OR fichier = '' THEN 
+		set resultat = -4;
+	END IF;
+    
+    IF typeFichier is null OR typeFichier = '' THEN 
+		set resultat = -3;
+	END IF;
+    
+    IF sinistreId is null OR sinistreId = 0 THEN 
+		set resultat = -2;
+	ELSEIF (SELECT COUNT(*) FROM Sinistres WHERE id = sinistreId) = 0 THEN
+		set resultat = -1;
+	END IF;
+    
+    IF resultat is null THEN
+		INSERT INTO ElementSinistres (idEvenement,Type,Fichier)
+		VALUES (sinistreId,typeFichier,fichier);
+		set resultat = 1;
+	END IF;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_Connexion_Conseiller`(IN login varchar(45),
+										IN motDePasse char(40),
+                                        OUT resultat INT)
+    COMMENT 'Vérifie si le login et le mot de passe vont ensemble. Retourne un nombre positif si OK, un chiffre négatif si ERREUR.'
+BEGIN
+	DECLARE nbRangs Int;
+    
+	#Erreur générale non définie
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+		set resultat = -99;
+
+    IF motDePasse is null OR motDePasse = '' THEN 
+		set resultat = -3;
+	END IF;
+    
+    IF login is null OR login = '' THEN 
+		set resultat = -2;
+	END IF;
+
+    IF motDePasse is null OR motDePasse = '' THEN 
+		set resultat = -3;
+	END IF;
+    
+    IF resultat is null THEN
+		SELECT COUNT(*) INTO nbRangs
+			FROM Conseillers
+            WHERE Conseillers.Login = login AND Conseillers.MotDePasse = sha1(motDePasse);
+		set resultat = nbRangs;
+	END IF;
+    
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_CreerConseiller`(
 										IN login varchar(45),
                                         IN pass varchar(45),
@@ -54,6 +181,24 @@ BEGIN
 		set resultat = 1;
 	END IF;
     
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_GetConseiller`(IN conseillerId INT)
+BEGIN
+	SELECT * 
+    FROM Conseillers
+    WHERE id = conseillerId;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_Lister_Cat`()
+    COMMENT 'Liste les catégories de sinistre.'
+BEGIN
+	SELECT CategorieSinistre.*, COUNT(Sinistres.id) AS nbSinistres 
+    FROM CategorieSinistre
+	LEFT JOIN Sinistres 
+		ON CategorieSinistre.id = Sinistres.Categorie
+	GROUP BY CategorieSinistre.id, CategorieSinistre.Nom;
+
 END$$
 
 DELIMITER ;
