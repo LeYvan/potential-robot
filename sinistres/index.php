@@ -5,6 +5,9 @@ require_once($base."include/header.php");
 ?>
   	<div id="page" class="container">
 		<h1>Sinistres</h1>
+  		<div class="panel">
+  			<a href="/sinistres/ajouter.php"><h4><span class="label label-warning"><span class="glyphicon glyphicon glyphicon-plus" aria-hidden="true"></span>Publier un noueau rapport</span></h4></a>
+  		</div>
   		<div class="row">
 			<div class="col-md-3 col-md-push-9">
 				<div class="list-group">

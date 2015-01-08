@@ -4,7 +4,7 @@
 
 	public class BD
 	{
-		private $connBD = NULL
+		private $connBD = NULL;
 
 		public function connexion
 		{
@@ -22,10 +22,6 @@
 				{
 					exit( "Erreur lors de la connexion à la BD :<br />\n" .  $e->getMessage() );
 				}
-			}
-			else
-			{
-				$this->connBD = $connBD
 			}
 
 			return $connBD			
