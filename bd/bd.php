@@ -6,17 +6,17 @@
 	{
 		private $connBD = NULL
 
-		public connexion
+		public function connexion
 		{
-			if ($this->$connBD == NULL)
+			if ($this->connBD == NULL)
 			{
 				// Création d'une connexion à la BD.
 				try 
 				{
-					$connBD = new PDO("mysql:host=$dbHote; dbname=$dbNom", $dbUtilisateur, $dbMotPasse, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8"));
+					$this->connBD = new PDO("mysql:host=$dbHote; dbname=$dbNom", $dbUtilisateur, $dbMotPasse, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8"));
 					
 					// Pour lancer les exceptions lorsqu'il y des erreurs PDO.
-					$connBD -> setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION );
+					$this->connBD -> setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION );
 				}
 				catch (PDOException $e) 
 				{
@@ -25,7 +25,7 @@
 			}
 			else
 			{
-				$this->$connBD = $connBD
+				$this->connBD = $connBD
 			}
 
 			return $connBD			
