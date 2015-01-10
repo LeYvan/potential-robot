@@ -2,6 +2,8 @@
 $base = "../";
 $titre = "Sinistres";
 require_once($base."include/header.php");
+
+$nav_en_cours = 'sinistres';
 ?>
 	<div id="page" class="container">
 		<h1>Sinistres</h1>

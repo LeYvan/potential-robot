@@ -1,3 +1,7 @@
+<?php
+	require_once("Sessions/session.php");
+?>
+
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" lang="fr" xml:lang="fr">
   <head>
@@ -42,14 +46,30 @@
 	    <!-- Collect the nav links, forms, and other content for toggling -->
 	    <div class="collapse navbar-collapse" id="bs-faireface-navbar-collapse-1">
 	      <ul class="nav navbar-nav">
-	        <li><a href="alertes">Alertes <sup><span class="badge">420</span></sup></a></li>
-	        <li><a href="nouvelles">Nouvelles <sup><span class="badge">42</span></sup></a></li>
-	        <li><a href="capsules">Capsules <sup><span class="badge"></span></sup></a></li>
-	        <li><a href="plan">Plan Familial</a></li>
-	        <li><a href="sinistres">Sinistres <sup><span class="badge">4</span></sup></a></li>
+	        <li<?php if ($nav_en_cours == 'alertes') {echo ' class="active"';} ?>><a href="alertes">Alertes <sup><span class="badge">420</span></sup></a></li>
+	        <li<?php if ($nav_en_cours == 'nouvelles') {echo ' class="active"';} ?>><a href="nouvelles">Nouvelles <sup><span class="badge">42</span></sup></a></li>
+	        <li<?php if ($nav_en_cours == 'capsules') {echo ' class="active"';} ?>><a href="capsules">Capsules <sup><span class="badge"></span></sup></a></li>
+	        <li<?php if ($nav_en_cours == 'plan') {echo ' class="active"';} ?>><a href="plan">Plan Familial</a></li>
+	        <li<?php if ($nav_en_cours == 'sinistres') {echo ' class="active"';} ?>><a href="sinistres">Sinistres <sup><span class="badge">4</span></sup></a></li>
 	      </ul>
 	      <ul class="nav navbar-nav navbar-right">
-	        <li><a href="#">Connexion</a></li>
+
+	      	<?php
+	      		global $sessionCourrante;
+
+	      		if ($sessionCourrante->estConnecte())
+	      		{
+	      			// Afficher le nom et deconnection <li><a href="#">Deconnexion</a></li>
+	      			echo "<li>".$sessionCourrante['login']. "| <a href=\"deconnexion.php\">Deconnexion</a></li>";
+
+	      		}
+	      		else
+	      		{
+	      			// Afficher connexion   <li><a href="#">Connexion</a></li>
+	      			echo "<li><a href=\"connexion.php\">Connexion</a></li>";
+	      		}
+	      	?>
+	        
 	      </ul>
 	    </div><!-- /.navbar-collapse -->
 	  </div><!-- /.container-fluid -->
