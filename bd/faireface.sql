@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Jan 07, 2015 at 05:09 PM
+-- Generation Time: Jan 08, 2015 at 09:55 PM
 -- Server version: 5.6.16
 -- PHP Version: 5.5.9
 
@@ -24,6 +24,133 @@ DELIMITER $$
 --
 -- Procedures
 --
+CREATE DEFINER=`root`@`localhost` PROCEDURE `Ajouter_Sinistres`(
+		IN  Titre_Sinistre          varchar(255),
+		IN  Categorie_Sinistre      INT(11),
+		IN  Description_Sinistre    varchar(255),
+		IN  GeoPosX_Sinistre        float,
+		IN  GeoPosY_Sinistre        float,
+		OUT resultat  		        INT(1))
+BEGIN
+	DECLARE countCatergorie INT;
+    
+	SELECT COUNT(id) into countCatergorie FROM categoriesinistre WHERE id = Categorie_Sinistre;
+    
+    if countCatergorie then
+		INSERT INTO sinistres(
+			Titre,
+			Categorie,
+			Description,
+			GeoPosX,
+			GeoPosY) 
+		values(
+			Titre_Sinistre,
+			Categorie_Sinistre,
+			Description_Sinistre,
+			GeoPosX_Sinistre,
+			GeoPosY_Sinistre);
+		SET resultat = 1;
+	else
+		SET resultat = -1;
+	end if;
+end$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `Lister_Evenement`()
+BEGIN
+	
+	SELECT * FROM sinistres; 
+
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_Ajouter_Cat_Sinistre`(IN nomCat VARCHAR(255),
+                                        OUT resultat INT)
+    COMMENT 'Ajoute une catégorie de sinistre. Retourne un nombre positif si OK, un chiffre négatif si ERREUR.'
+BEGIN
+
+	#Erreur de données dupliquée
+	#Généralement levée lors de l'ajout d'une catégorie qui existe déjà.
+ 	DECLARE EXIT HANDLER FOR 1062 
+		set resultat = -1;
+
+	#Erreur générale non définie
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+		set resultat = -99;
+    
+    IF nomCat is null OR nomCat = '' THEN 
+		set resultat = -2;
+	END IF;
+    
+    IF resultat is null THEN
+		INSERT INTO CategorieSinistre (Nom)
+		VALUES (nomCat);
+		set resultat = 1;
+	END IF;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_Ajouter_Element_Sinistre`(IN sinistreId INT,
+										IN typeFichier Enum('Image','Video'),
+                                        IN fichier VARCHAR(255),
+                                        OUT resultat INT)
+    COMMENT 'Ajoute un élément au sinistre. Retourne un nombre positif si OK, un chiffre négatif si ERREUR.'
+BEGIN
+
+	#Erreur générale non définie
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+		set resultat = -99;
+    
+    IF fichier is null OR fichier = '' THEN 
+		set resultat = -4;
+	END IF;
+    
+    IF typeFichier is null OR typeFichier = '' THEN 
+		set resultat = -3;
+	END IF;
+    
+    IF sinistreId is null OR sinistreId = 0 THEN 
+		set resultat = -2;
+	ELSEIF (SELECT COUNT(*) FROM Sinistres WHERE id = sinistreId) = 0 THEN
+		set resultat = -1;
+	END IF;
+    
+    IF resultat is null THEN
+		INSERT INTO ElementSinistres (idEvenement,Type,Fichier)
+		VALUES (sinistreId,typeFichier,fichier);
+		set resultat = 1;
+	END IF;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_Connexion_Conseiller`(IN login varchar(45),
+										IN motDePasse char(40),
+                                        OUT resultat INT)
+    COMMENT 'Vérifie si le login et le mot de passe vont ensemble. Retourne un nombre positif si OK, un chiffre négatif si ERREUR.'
+BEGIN
+	DECLARE nbRangs Int;
+    
+	#Erreur générale non définie
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+		set resultat = -99;
+
+    IF motDePasse is null OR motDePasse = '' THEN 
+		set resultat = -3;
+	END IF;
+    
+    IF login is null OR login = '' THEN 
+		set resultat = -2;
+	END IF;
+
+    IF motDePasse is null OR motDePasse = '' THEN 
+		set resultat = -3;
+	END IF;
+    
+    IF resultat is null THEN
+		SELECT COUNT(*) INTO nbRangs
+			FROM Conseillers
+            WHERE Conseillers.Login = login AND Conseillers.MotDePasse = sha1(motDePasse);
+		set resultat = nbRangs;
+	END IF;
+    
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_CreerConseiller`(
 										IN login varchar(45),
                                         IN pass varchar(45),
@@ -54,6 +181,24 @@ BEGIN
 		set resultat = 1;
 	END IF;
     
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_GetConseiller`(IN conseillerId INT)
+BEGIN
+	SELECT * 
+    FROM Conseillers
+    WHERE id = conseillerId;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_Lister_Cat`()
+    COMMENT 'Liste les catégories de sinistre.'
+BEGIN
+	SELECT CategorieSinistre.*, COUNT(Sinistres.id) AS nbSinistres 
+    FROM CategorieSinistre
+	LEFT JOIN Sinistres 
+		ON CategorieSinistre.id = Sinistres.Categorie
+	GROUP BY CategorieSinistre.id, CategorieSinistre.Nom;
+
 END$$
 
 DELIMITER ;
@@ -143,7 +288,8 @@ INSERT INTO `Capsule` (`id`, `DateEmission`, `DateParution`, `Titre`, `Contenu`)
 CREATE TABLE IF NOT EXISTS `CategorieSinistre` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `Nom` varchar(255) DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `Nom` (`Nom`)
 ) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=16 ;
 
 --
@@ -151,21 +297,21 @@ CREATE TABLE IF NOT EXISTS `CategorieSinistre` (
 --
 
 INSERT INTO `CategorieSinistre` (`id`, `Nom`) VALUES
-(1, 'cursus vestibulum. Mauris magna.'),
-(2, 'tellus. Aenean egestas hendrerit'),
-(3, 'fermentum fermentum'),
-(4, 'quam'),
-(5, 'purus gravida sagittis.'),
-(6, 'mauris. Morbi non'),
-(7, 'eget, venenatis a, magna.'),
 (8, 'ac'),
-(9, 'ornare lectus justo eu'),
-(10, 'hendrerit. Donec porttitor tellus'),
+(1, 'cursus vestibulum. Mauris magna.'),
+(7, 'eget, venenatis a, magna.'),
+(3, 'fermentum fermentum'),
 (11, 'hendrerit id,'),
-(12, 'sed'),
+(10, 'hendrerit. Donec porttitor tellus'),
 (13, 'Mauris'),
-(14, 'Vivamus sit'),
-(15, 'nisi. Mauris nulla.');
+(6, 'mauris. Morbi non'),
+(15, 'nisi. Mauris nulla.'),
+(9, 'ornare lectus justo eu'),
+(5, 'purus gravida sagittis.'),
+(4, 'quam'),
+(12, 'sed'),
+(2, 'tellus. Aenean egestas hendrerit'),
+(14, 'Vivamus sit');
 
 -- --------------------------------------------------------
 
@@ -180,7 +326,7 @@ CREATE TABLE IF NOT EXISTS `Conseillers` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `id_UNIQUE` (`id`),
   UNIQUE KEY `loging_UNIQUE` (`Login`)
-) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=3 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=2 ;
 
 --
 -- Dumping data for table `Conseillers`
@@ -384,6 +530,8 @@ CREATE TABLE IF NOT EXISTS `Sinistres` (
   `Description` varchar(255) DEFAULT NULL,
   `GeoPosX` float DEFAULT NULL,
   `GeoPosY` float DEFAULT NULL,
+  `afficher` tinyint(1) NOT NULL DEFAULT '1',
+  `date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `Categorie` (`Categorie`)
 ) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=16 ;
@@ -392,22 +540,22 @@ CREATE TABLE IF NOT EXISTS `Sinistres` (
 -- Dumping data for table `Sinistres`
 --
 
-INSERT INTO `Sinistres` (`id`, `Titre`, `Categorie`, `Description`, `GeoPosX`, `GeoPosY`) VALUES
-(1, 'Lorem ipsum dolor', 15, 'Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Curabitur sed tortor. Integer aliquam adipiscing lacus. Ut nec urna et arcu imperdiet ullamcorper. Duis at lacus. Quisque purus sapien, gravida non, sollicitudin a, malesuada id, erat. Etiam vestib', 436, 665),
-(2, 'Lorem ipsum', 14, 'Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Curabitur sed tortor. Integer aliquam adipiscing lacus. Ut nec urna et arcu imperdiet ullamcorper. Duis at lacus. Quisque purus sapien, gravida non, sollicitudin a, malesuada id, erat. Etiam vestib', 422, 998),
-(3, 'Lorem ipsum dolor sit amet,', 1, 'Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Curabitur sed tortor. Integer aliquam adipiscing lacus. Ut nec urna et arcu imperdiet ullamcorper. Duis at lacus. Quisque purus sapien, gravida non, sollicitudin a, malesuada id, erat. Etiam vestib', 461, 760),
-(4, 'Lorem ipsum dolor sit', 12, 'Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Curabitur sed tortor. Integer aliquam adipiscing lacus. Ut nec urna et arcu imperdiet ullamcorper. Duis at lacus. Quisque purus sapien, gravida non, sollicitudin a, malesuada id, erat. Etiam vestib', 653, 14),
-(5, 'Lorem ipsum dolor sit amet,', 5, 'Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Curabitur sed tortor. Integer aliquam adipiscing lacus. Ut nec urna et arcu imperdiet ullamcorper. Duis at lacus. Quisque purus sapien, gravida non, sollicitudin a, malesuada id, erat. Etiam vestib', 47, 86),
-(6, 'Lorem ipsum dolor', 5, 'Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Curabitur sed tortor. Integer aliquam adipiscing lacus. Ut nec urna et arcu imperdiet ullamcorper. Duis at lacus. Quisque purus sapien, gravida non, sollicitudin a, malesuada id, erat. Etiam vestib', 949, 312),
-(7, 'Lorem ipsum dolor sit amet,', 9, 'Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Curabitur sed tortor. Integer aliquam adipiscing lacus. Ut nec urna et arcu imperdiet ullamcorper. Duis at lacus. Quisque purus sapien, gravida non, sollicitudin a, malesuada id, erat. Etiam vestib', 302, 839),
-(8, 'Lorem ipsum dolor sit', 9, 'Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Curabitur sed tortor. Integer aliquam adipiscing lacus. Ut nec urna et arcu imperdiet ullamcorper. Duis at lacus. Quisque purus sapien, gravida non, sollicitudin a, malesuada id, erat. Etiam vestib', 836, 447),
-(9, 'Lorem ipsum dolor', 9, 'Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Curabitur sed tortor. Integer aliquam adipiscing lacus. Ut nec urna et arcu imperdiet ullamcorper. Duis at lacus. Quisque purus sapien, gravida non, sollicitudin a, malesuada id, erat. Etiam vestib', 341, 940),
-(10, 'Lorem ipsum dolor', 15, 'Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Curabitur sed tortor. Integer aliquam adipiscing lacus. Ut nec urna et arcu imperdiet ullamcorper. Duis at lacus. Quisque purus sapien, gravida non, sollicitudin a, malesuada id, erat. Etiam vestib', 512, 430),
-(11, 'Lorem ipsum dolor sit amet,', 9, 'Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Curabitur sed tortor. Integer aliquam adipiscing lacus. Ut nec urna et arcu imperdiet ullamcorper. Duis at lacus. Quisque purus sapien, gravida non, sollicitudin a, malesuada id, erat. Etiam vestib', 559, 726),
-(12, 'Lorem ipsum', 9, 'Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Curabitur sed tortor. Integer aliquam adipiscing lacus. Ut nec urna et arcu imperdiet ullamcorper. Duis at lacus. Quisque purus sapien, gravida non, sollicitudin a, malesuada id, erat. Etiam vestib', 69, 377),
-(13, 'Lorem ipsum dolor sit amet,', 2, 'Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Curabitur sed tortor. Integer aliquam adipiscing lacus. Ut nec urna et arcu imperdiet ullamcorper. Duis at lacus. Quisque purus sapien, gravida non, sollicitudin a, malesuada id, erat. Etiam vestib', 985, 301),
-(14, 'Lorem ipsum dolor', 2, 'Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Curabitur sed tortor. Integer aliquam adipiscing lacus. Ut nec urna et arcu imperdiet ullamcorper. Duis at lacus. Quisque purus sapien, gravida non, sollicitudin a, malesuada id, erat. Etiam vestib', 610, 654),
-(15, 'Lorem ipsum dolor sit amet,', 9, 'Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Curabitur sed tortor. Integer aliquam adipiscing lacus. Ut nec urna et arcu imperdiet ullamcorper. Duis at lacus. Quisque purus sapien, gravida non, sollicitudin a, malesuada id, erat. Etiam vestib', 286, 945);
+INSERT INTO `Sinistres` (`id`, `Titre`, `Categorie`, `Description`, `GeoPosX`, `GeoPosY`, `afficher`, `date`) VALUES
+(1, 'Lorem ipsum dolor', 15, 'Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Curabitur sed tortor. Integer aliquam adipiscing lacus. Ut nec urna et arcu imperdiet ullamcorper. Duis at lacus. Quisque purus sapien, gravida non, sollicitudin a, malesuada id, erat. Etiam vestib', 436, 665, 0, '2015-01-08 09:47:37'),
+(2, 'Lorem ipsum', 14, 'Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Curabitur sed tortor. Integer aliquam adipiscing lacus. Ut nec urna et arcu imperdiet ullamcorper. Duis at lacus. Quisque purus sapien, gravida non, sollicitudin a, malesuada id, erat. Etiam vestib', 422, 998, 0, '2015-01-08 09:47:37'),
+(3, 'Lorem ipsum dolor sit amet,', 1, 'Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Curabitur sed tortor. Integer aliquam adipiscing lacus. Ut nec urna et arcu imperdiet ullamcorper. Duis at lacus. Quisque purus sapien, gravida non, sollicitudin a, malesuada id, erat. Etiam vestib', 461, 760, 0, '2015-01-08 09:47:37'),
+(4, 'Lorem ipsum dolor sit', 12, 'Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Curabitur sed tortor. Integer aliquam adipiscing lacus. Ut nec urna et arcu imperdiet ullamcorper. Duis at lacus. Quisque purus sapien, gravida non, sollicitudin a, malesuada id, erat. Etiam vestib', 653, 14, 0, '2015-01-08 09:47:37'),
+(5, 'Lorem ipsum dolor sit amet,', 5, 'Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Curabitur sed tortor. Integer aliquam adipiscing lacus. Ut nec urna et arcu imperdiet ullamcorper. Duis at lacus. Quisque purus sapien, gravida non, sollicitudin a, malesuada id, erat. Etiam vestib', 47, 86, 0, '2015-01-08 09:47:37'),
+(6, 'Lorem ipsum dolor', 5, 'Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Curabitur sed tortor. Integer aliquam adipiscing lacus. Ut nec urna et arcu imperdiet ullamcorper. Duis at lacus. Quisque purus sapien, gravida non, sollicitudin a, malesuada id, erat. Etiam vestib', 949, 312, 0, '2015-01-08 09:47:37'),
+(7, 'Lorem ipsum dolor sit amet,', 9, 'Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Curabitur sed tortor. Integer aliquam adipiscing lacus. Ut nec urna et arcu imperdiet ullamcorper. Duis at lacus. Quisque purus sapien, gravida non, sollicitudin a, malesuada id, erat. Etiam vestib', 302, 839, 0, '2015-01-08 09:47:37'),
+(8, 'Lorem ipsum dolor sit', 9, 'Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Curabitur sed tortor. Integer aliquam adipiscing lacus. Ut nec urna et arcu imperdiet ullamcorper. Duis at lacus. Quisque purus sapien, gravida non, sollicitudin a, malesuada id, erat. Etiam vestib', 836, 447, 0, '2015-01-08 09:47:37'),
+(9, 'Lorem ipsum dolor', 9, 'Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Curabitur sed tortor. Integer aliquam adipiscing lacus. Ut nec urna et arcu imperdiet ullamcorper. Duis at lacus. Quisque purus sapien, gravida non, sollicitudin a, malesuada id, erat. Etiam vestib', 341, 940, 0, '2015-01-08 09:47:37'),
+(10, 'Lorem ipsum dolor', 15, 'Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Curabitur sed tortor. Integer aliquam adipiscing lacus. Ut nec urna et arcu imperdiet ullamcorper. Duis at lacus. Quisque purus sapien, gravida non, sollicitudin a, malesuada id, erat. Etiam vestib', 512, 430, 0, '2015-01-08 09:47:37'),
+(11, 'Lorem ipsum dolor sit amet,', 9, 'Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Curabitur sed tortor. Integer aliquam adipiscing lacus. Ut nec urna et arcu imperdiet ullamcorper. Duis at lacus. Quisque purus sapien, gravida non, sollicitudin a, malesuada id, erat. Etiam vestib', 559, 726, 0, '2015-01-08 09:47:37'),
+(12, 'Lorem ipsum', 9, 'Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Curabitur sed tortor. Integer aliquam adipiscing lacus. Ut nec urna et arcu imperdiet ullamcorper. Duis at lacus. Quisque purus sapien, gravida non, sollicitudin a, malesuada id, erat. Etiam vestib', 69, 377, 0, '2015-01-08 09:47:37'),
+(13, 'Lorem ipsum dolor sit amet,', 2, 'Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Curabitur sed tortor. Integer aliquam adipiscing lacus. Ut nec urna et arcu imperdiet ullamcorper. Duis at lacus. Quisque purus sapien, gravida non, sollicitudin a, malesuada id, erat. Etiam vestib', 985, 301, 0, '2015-01-08 09:47:37'),
+(14, 'Lorem ipsum dolor', 2, 'Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Curabitur sed tortor. Integer aliquam adipiscing lacus. Ut nec urna et arcu imperdiet ullamcorper. Duis at lacus. Quisque purus sapien, gravida non, sollicitudin a, malesuada id, erat. Etiam vestib', 610, 654, 0, '2015-01-08 09:47:37'),
+(15, 'Lorem ipsum dolor sit amet,', 9, 'Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Curabitur sed tortor. Integer aliquam adipiscing lacus. Ut nec urna et arcu imperdiet ullamcorper. Duis at lacus. Quisque purus sapien, gravida non, sollicitudin a, malesuada id, erat. Etiam vestib', 286, 945, 0, '2015-01-08 09:47:37');
 
 --
 -- Constraints for dumped tables
@@ -430,7 +578,7 @@ ALTER TABLE `RessourcePourAlerte`
 -- Constraints for table `Sinistres`
 --
 ALTER TABLE `Sinistres`
-  ADD CONSTRAINT `Categorie` FOREIGN KEY (`Categorie`) REFERENCES `categoriesinistre` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION;
+  ADD CONSTRAINT `Categorie` FOREIGN KEY (`Categorie`) REFERENCES `CategorieEvenement` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
